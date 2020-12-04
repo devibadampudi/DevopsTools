@@ -1,0 +1,65 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "readRegionLocation": {
+            "type": "string",
+            "defaultValue": "centralus",
+            "allowedValues": [
+                "eastasia",
+                "centralus",
+                "northcentralus",
+                "brazilsouth",
+                "australiaeast",
+                "southindia",
+                "westindia",
+                "canadaeast",
+                "ukwest",
+                "koreacentral"
+            ],
+            "metadata": {
+                "description": "if you select core and hardening or core and hardening with monitoring specify the desaster recovery region for webapps and azure sqlserver,cosmos Db desaster recovary it should be different of resource group region"
+            }
+        }
+    },
+    "variables": {
+        "location": "[resourceGroup().location]",
+        "DocDBAccountName": "[concat(toLower('docdb'),variables('suffix'))]",
+        "offerType": "Standard",
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 5)]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-04-08",
+            "kind": "GlobalDocumentDB",
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "name": "[variables('DocDBAccountName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "name": "[variables('DocDBAccountName')]",
+                "databaseAccountOfferType": "[variables('offerType')]",
+                "enableAutomaticFailover": true,
+                "locations": [
+                    {
+                        "locationName": "[variables('location')]",
+                        "failoverPriority": 0,
+                        "id": "[concat(variables('DocDBAccountName'), '-', variables('location'))]"
+                    },
+                    {
+                        "locationName": "[parameters('readRegionLocation')]",
+                        "failoverPriority": 1
+                    }
+                ]
+            },
+            "tags": {
+                "defaultExperience": "DocumentDB"
+            }
+        }
+    ],
+    "outputs": {
+        "documentDBEndpoint": {
+            "type": "string",
+            "value": "[reference(concat('Microsoft.DocumentDb/databaseAccounts/', variables('DocDBAccountName'))).documentEndpoint]"
+        }
+    }
+}

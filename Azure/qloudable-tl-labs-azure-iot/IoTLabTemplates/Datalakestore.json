@@ -1,0 +1,39 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dataLakelocation": {
+            "type": "string",
+            "defaultValue": "eastus2",
+            "allowedValues": [
+                "eastus2",
+                "centralus",
+                "northeurope",
+                "westeurope"
+            ],
+            "metadata": {
+                "description": "Choose location for Data Lake Store, for more information about the Data Lake Store navigate to https://github.com/sysgain/Oil-Gas/wiki/Deployment-Guide in wiki"
+            }
+        }
+    },
+    "variables": {
+        "name": "[concat('datalakestore',variables('suffix'))]",
+        "dataLakelocation": "[parameters('dataLakelocation')]",
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 4)]"
+    },
+    "resources": [
+        {
+            "name": "[variables('name')]",
+            "type": "Microsoft.DataLakeStore/accounts",
+            "apiVersion": "2016-11-01",
+            "location": "[variables('dataLakelocation')]",
+            "properties": {
+                "newTier": "Consumption",
+                "encryptionState": "Enabled",
+                "encryptionConfig": {
+                    "type": "ServiceManaged"
+                }
+            }
+        }
+    ]
+}

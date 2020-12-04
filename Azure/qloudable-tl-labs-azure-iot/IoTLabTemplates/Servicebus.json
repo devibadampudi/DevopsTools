@@ -1,0 +1,74 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 4)]",
+        "serviceBusNamespaceName": "[concat('snamespace',variables('suffix'))]",
+        "location": "[resourceGroup().location]",
+        "skuName": "Standard",
+        "serviceBusQueueName": "testqueue"
+    },
+    "resources": [
+        {
+            "name": "[variables('serviceBusNamespaceName')]",
+            "type": "Microsoft.ServiceBus/namespaces",
+            "apiVersion": "2017-04-01",
+            "location": "[variables('location')]",
+            "sku": {
+                "name": "[variables('skuName')]"
+            },
+            "properties": {},
+            "resources": [
+                {
+                    "name": "[variables('serviceBusQueueName')]",
+                    "apiVersion": "2017-04-01",
+                    "type": "Queues",
+                    "dependsOn": [
+                        "[concat('Microsoft.ServiceBus/namespaces/', variables('serviceBusNamespaceName'))]"
+                    ],
+                    "properties": {
+                        "lockDuration": "PT5M",
+                        "maxSizeInMegabytes": "1024",
+                        "requiresDuplicateDetection": "false",
+                        "requiresSession": "false",
+                        "defaultMessageTimeToLive": "P10675199DT2H48M5.4775807S",
+                        "deadLetteringOnMessageExpiration": "false",
+                        "duplicateDetectionHistoryTimeWindow": "PT10M",
+                        "maxDeliveryCount": "10",
+                        "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+                        "enablePartitioning": "false",
+                        "enableExpress": "false"
+                    },
+                    "resources": [
+                        {
+                            "apiVersion": "2015-08-01",
+                            "name": "[concat(variables('serviceBusQueueName'),'send')]",
+                            "type": "AuthorizationRules",
+                            "dependsOn": [
+                                "[variables('serviceBusQueueName')]"
+                            ],
+                            "properties": {
+                                "keyName": "[concat(variables('serviceBusQueueName'),'send')]",
+                                "claimType": "SharedAccessKey",
+                                "claimValue": "None",
+                                "rights": [
+                                    "Send",
+                                    "Listen",
+                                    "Manage"
+                                ],
+                                "revision": -1
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "connectionString": {
+            "type": "string",
+            "value": "[listKeys(resourceId(concat('Microsoft.ServiceBus/namespaces/AuthorizationRules'),variables('serviceBusNamespaceName'),'RootManageSharedAccessKey'),'2015-08-01').primaryConnectionString]"
+        }
+    }
+}

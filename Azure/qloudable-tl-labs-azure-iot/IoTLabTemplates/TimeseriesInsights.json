@@ -1,0 +1,48 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "timeSeriesInsightslocation": {
+            "type": "string",
+            "defaultValue": "East US",
+            "allowedValues": [
+                "East US",
+                "East US2",
+                "North Europe",
+                "West Europe",
+                "West US"
+            ],
+            "metadata": {
+                "description": "specify the region for time series insights"
+            }
+        }
+    },
+    "variables": {
+        "timeSeriesInsightslocation": "[parameters('timeSeriesInsightslocation')]",
+        "timeSeriesInsightsName": "[concat('timeseriesinsights', variables('suffix'))]",
+        "dataRetentionTime": "P31D",
+        "skuCapacity": 1,
+        "skuSize": "S1",
+        "skuTier": "Standard",
+        "skuName": "S1",
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 5)]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-11-15",
+            "name": "[variables('timeSeriesInsightsName')]",
+            "location": "[variables('timeSeriesInsightslocation')]",
+            "scale": null,
+            "type": "Microsoft.TimeSeriesInsights/environments",
+            "sku": {
+                "name": "[variables('skuName')]",
+                "tier": "[variables('skuTier')]",
+                "size": "[variables('skuSize')]",
+                "capacity": "[variables('skuCapacity')]"
+            },
+            "properties": {
+                "dataRetentionTime": "[variables('dataRetentionTime')]"
+            }
+        }
+    ]
+}

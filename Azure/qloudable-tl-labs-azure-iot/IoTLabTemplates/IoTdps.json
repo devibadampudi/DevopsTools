@@ -1,0 +1,149 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "iotHubName": {
+            "type": "string",
+            "minLength": 3,
+            "metadata": {
+                "description": "Name of the IoT Hub instance to provision."
+            }
+        },
+        "skuName": {
+            "type": "string",
+            "allowedValues": [
+                "F1",
+                "S1",
+                "S2"
+            ],
+            "defaultValue": "S1",
+            "metadata": {
+                "description": "Pricing tier for IoT Hub"
+            }
+        },
+        "capacityUnits": {
+            "type": "int",
+            "minValue": 1,
+            "defaultValue": 1,
+            "metadata": {
+                "description": "Number of desired IoT Hub units. Restricted to 1 unit for F1. Can be set up to maximum number allowed for subscription."
+            }
+        },
+        "d2cMessageRetentionInDaysPeriod": {
+            "type": "int",
+            "minValue": 1,
+            "maxValue": 7,
+            "defaultValue": 1,
+            "metadata": {
+                "description": "Retention time in days for device-to-cloud messages."
+            }
+        },
+        "d2cPartitionCount": {
+            "type": "int",
+            "minValue": 2,
+            "defaultValue": 2,
+            "allowedValues": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10
+            ],
+            "metadata": {
+                "description": "Number of desired partitions for device-to-cloud event ingestion.Restricted to 1 unit for F1"
+            }
+        }
+    },
+    "variables": {
+        "iotHubName": "[concat(parameters('iotHubName'),variables('suffix'))]",
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 5)]",
+        "location": "[resourceGroup().location]",
+        "iotDpsName": "[concat('deviceprovis',variables('suffix'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-04-01",
+            "type": "Microsoft.Devices/IotHubs",
+            "location": "[variables('location')]",
+            "name": "[variables('iotHubName')]",
+            "sku": {
+                "name": "[parameters('skuName')]",
+                "capacity": "[parameters('capacityUnits')]"
+            },
+            "properties": {
+                "eventHubEndpoints": {
+                    "events": {
+                        "retentionTimeInDays": "[parameters('d2cMessageRetentionInDaysPeriod')]",
+                        "partitionCount": "[parameters('d2cPartitionCount')]"
+                    }
+                },
+                 "cloudToDevice": {
+                    "defaultTtlAsIso8601": "PT1H",
+                    "maxDeliveryCount": 10,
+                    "feedback": {
+                        "ttlAsIso8601": "PT1H",
+                        "lockDurationAsIso8601": "PT60S",
+                        "maxDeliveryCount": 10
+                    }
+                },
+                "messagingEndpoints": {
+                    "fileNotifications": {
+                        "ttlAsIso8601": "PT1H",
+                        "lockDurationAsIso8601": "PT1M",
+                        "maxDeliveryCount": 10
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-11-15",
+            "type": "Microsoft.Devices/ProvisioningServices",
+            "name": "[variables('iotDpsName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Devices/IotHubs/', variables('iotHubName'))]"
+            ],
+            "sku": {
+                "name": "S1",
+                "tier": "Standard",
+                "capacity": 1
+            },
+            "properties": {
+                "iotHubs": [
+                    {
+                        "applyAllocationPolicy": true,
+                        "allocationWeight": "1",
+                        "connectionString": "[concat('HostName=',variables('iotHubName'),'.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=',listkeys(resourceId('Microsoft.Devices/IotHubs/IotHubKeys',variables('iotHubName'),'iothubowner'),'2016-02-03').primaryKey)]",
+                        "location": "[variables('location')]"
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "iotHubName": {
+            "type": "string",
+            "value": "[variables('iotHubName')]"
+        },
+        "iotHubEndPoint": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Devices/IoTHubs',variables('iotHubName'))).hostName]"
+        },
+        "iotHubPrimaryKey": {
+            "type": "string",
+            "value": "[listkeys(resourceId('Microsoft.Devices/IotHubs/IotHubKeys',variables('iotHubName'),'iothubowner'),'2016-02-03').primaryKey]"
+        },
+          "iotDpsIdScope": {
+            "value": "[reference(resourceId('Microsoft.Devices/ProvisioningServices',variables('iotDpsName'))).idScope]",
+            "type": "string"
+        },
+        "iotDpsPrimaryKey": {
+            "value": "[listkeys(resourceId('Microsoft.Devices/ProvisioningServices/keys',variables('iotDpsName'),'provisioningserviceowner'),'2017-08-21-preview').primaryKey]",
+            "type": "string"
+        }
+    }
+}

@@ -1,0 +1,89 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sqlAdministratorLogin": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "provide the user name for the sql server, please make a note of Username this will be used further"
+            }
+        },
+        "sqlAdministratorLoginPassword": {
+            "type": "securestring",
+            "defaultValue": "",
+            "metadata": {
+                "description": "provide the password for the sql server, make a note of the Password this will be used further"
+            }
+        }
+    },
+    "variables": {
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 5)]",
+        "location": "[resourceGroup().location]",
+        "sqlAuthenticationLogin": "[parameters('sqlAdministratorLogin')]",
+        "sqlAuthenticationPassword": "[parameters('sqlAdministratorLoginPassword')]",
+        "edition": "Basic",
+        "requestedServiceObjectiveName": "Basic",
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "databaseName": "sqldb",
+        "maxSizeBytes": "2147483648",
+        "serverName": "[concat('sqlserver',variables('suffix'))]",
+        "storageKeyType": "SharedAccessKey",
+        "storageKey": "?",
+        "sqlServerApiVersion": "2015-05-01-preview",
+        "sqlDBApiVersion": "2014-04-01-preview"
+    },
+    "resources": [
+        {
+            "apiVersion": "[variables('sqlServerApiVersion')]",
+            "type": "Microsoft.Sql/servers",
+            "location": "[variables('location')]",
+            "name": "[variables('serverName')]",
+            "properties": {
+                "administratorLogin": "[variables('sqlAuthenticationLogin')]",
+                "administratorLoginPassword": "[variables('sqlAuthenticationPassword')]",
+                "version": "12.0"
+            },
+            "resources": [
+                {
+                    "apiVersion": "[variables('sqlDBApiVersion')]",
+                    "type": "databases",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', variables('serverName'))]"
+                    ],
+                    "location": "[variables('location')]",
+                    "name": "[variables('databaseName')]",
+                    "properties": {
+                        "collation": "[variables('collation')]",
+                        "edition": "[variables('edition')]",
+                        "maxSizeBytes": "[variables('maxSizeBytes')]",
+                        "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Sql/servers/firewallRules",
+            "location": "[variables('location')]",
+            "name": "[concat(variables('serverName'),'/','allowall')]",
+            "apiVersion": "[variables('sqlDBApiVersion')]",
+            "dependsOn": [
+                "[concat('Microsoft.Sql/servers/', variables('serverName'))]"
+            ],
+            "properties": {
+                "endIpAddress": "0.0.0.0",
+                "startIpAddress": "0.0.0.0"
+            }
+        }
+    ],
+    "outputs": {
+        "azureSQLServerName": {
+            "type": "string",
+            "value": "[concat(variables('serverName'),'.database.windows.net')]"
+        },
+        "sqlDBName": {
+            "type": "string",
+            "value": "[variables('databaseName')]"
+        }
+    }
+}

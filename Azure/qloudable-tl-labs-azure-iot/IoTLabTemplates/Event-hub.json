@@ -1,0 +1,65 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "skuName": {
+            "type": "string",
+            "allowedValues": [
+                "Standard",
+                "Premium"
+            ],
+            "defaultValue": "S1",
+            "metadata": {
+                "description": "Pricing tier for Event Hub"
+            }
+        }
+    },
+    "variables": {
+        "eventhubNamespace": "[concat('eventhubns',variables('suffix'))]",
+        "eventHubName": "[concat('eventhub',variables('suffix'))]",
+        "location": "[resourceGroup().location]",
+        "suffix": "[substring(uniqueString(resourceGroup().id), 0, 5)]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-04-01",
+            "name": "[variables('eventhubNamespace')]",
+            "type": "Microsoft.EventHub/Namespaces",
+            "location": "[variables('location')]",
+            "sku": {
+                "name": "[parameters('SkuName')]",
+                "tier": "[parameters('SkuName')]",
+                "capacity": 1
+            },
+            "properties": {
+                "isAutoInflateEnabled": "true",
+                "maximumThroughputUnits": "2"
+            },
+            "resources": [
+                {
+                    "apiVersion": "2017-04-01",
+                    "name": "[variables('eventhubName')]",
+                    "type": "EventHubs",
+                    "dependsOn": [
+                        "[concat('Microsoft.EventHub/namespaces/', variables('eventhubNamespace'))]"
+                    ],
+                    "properties": {
+                        "messageRetentionInDays": "3",
+                        "partitionCount": "4"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.EventHub/namespaces/eventhubs/consumergroups",
+            "apiVersion": "2017-04-01",
+            "name": "[concat(variables('eventhubNamespace'),'/',variables('eventhubName'),'/','consumergroup1')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.EventHub/namespaces/eventhubs', variables('eventhubNamespace'), variables('eventhubName'))]",
+                "[resourceId('Microsoft.EventHub/namespaces', variables('eventhubNamespace'))]"
+            ],
+            "properties": {}
+        }
+    ]
+}
