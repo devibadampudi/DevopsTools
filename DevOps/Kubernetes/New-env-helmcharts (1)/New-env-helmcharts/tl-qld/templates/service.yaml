@@ -1,0 +1,23 @@
+{{- if .Values.isSvc }}
+{{- if .Values.microServices }}
+{{- range $key, $val := .Values.microServices}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $key }}
+  labels:
+    app: {{ $key }}
+spec:
+  type: {{ $.Values.service.type }}
+  ports:
+    - port: {{ $val.svcPort }}
+      targetPort: {{ $val.containerPort }}
+      protocol: {{ $.Values.service.protocol }}
+      name: {{ $.Values.service.protocolName }}-{{ $val.containerPort }}
+  selector:
+    app: {{ $key }}
+
+---
+{{- end }}
+{{- end }}
+{{- end }}

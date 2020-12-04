@@ -1,0 +1,41 @@
+{{- if .Values.isIngress }}
+{{- if .Values.microServices }}
+{{- range $key, $val := .Values.microServices}}
+{{- if $val.needsIngress }}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ $key }}
+  annotations:
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "user_access, Ocp-Apim-Subscription-Key, Ocp-Apim-Trace, Authorization, Content-Type"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "*"
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/upstream-fail-timeout: "1000"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+spec:
+  tls:
+  - hosts:
+    - qld-tl-{{ $.Values.tlUrlEnv }}-{{ $key }}.qloudable{{ $.Values.env }}com
+    secretName: godaddy-secret
+  rules:  
+  - host: qld-tl-{{ $.Values.tlUrlEnv }}-{{ $key }}.qloudable{{ $.Values.env }}com
+    http:
+      paths:
+      - backend:
+          serviceName: {{ $key }}
+          servicePort: {{ $val.svcPort }}
+
+---
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

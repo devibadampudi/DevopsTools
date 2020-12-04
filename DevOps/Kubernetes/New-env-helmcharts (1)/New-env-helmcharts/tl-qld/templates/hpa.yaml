@@ -1,0 +1,22 @@
+{{- if .Values.isHpa }}
+{{- if .Values.microServices }}
+{{- range $key, $val := .Values.microServices }} 
+{{- if $val.needsHpa }}
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $key }}
+spec:
+  maxReplicas: {{ $val.maxReplicas }}
+  minReplicas: {{ $val.minReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $key }}
+  targetCPUUtilizationPercentage: 80
+
+---
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

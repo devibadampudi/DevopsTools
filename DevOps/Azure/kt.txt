@@ -1,0 +1,3 @@
+Front and backend communicates through API management. The API management Gateway url and subscription keys are updated in front end code src-app-appcontact.json, so they will communicate with each other.
+Request goes from front end to api management then api managemnt to backend services where kubernetes is running.
+created custom domains for front end web applications. CORS->It allows the custom domains, we are specifying in apiManagement-->Products-->Policies-->Specify custom domains

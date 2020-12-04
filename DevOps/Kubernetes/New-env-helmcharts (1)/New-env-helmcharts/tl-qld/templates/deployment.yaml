@@ -1,0 +1,82 @@
+{{- if eq .Values.deployWithSecrets "no" }}
+{{- if .Values.isDeploy }}
+{{- if .Values.microServices }}
+{{- range $key, $value := .Values.microServices }} 
+
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ $key }}
+  labels:
+    app: {{ $key }}
+    version: v1
+spec:
+  replicas: {{ $.Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $key }}
+      version: v1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        app: {{ $key }}
+        version: v1
+    spec:
+      imagePullSecrets:
+      - name: {{ $.Values.image.secret }}
+      containers:
+        - envFrom:
+          - configMapRef:
+              name: {{ $key }}
+          image: {{ $.Values.image.repository }}-{{ $.Values.tlEnv }}:{{ $value.imageTag }}-{{ $.Values.tlEnv }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          {{- if  $.Values.isResourceLimits }}
+          {{- if  $value.needsResourceLimits }}
+          resources:
+            {{- toYaml $.Values.resources |  trimSuffix "\n" | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            # readOnlyRootFilesystem: true
+            # runAsNonRoot: true
+            # runAsUser: 20000
+            capabilities: 
+              drop: 
+                - 'ALL'                
+          name: {{ $key }}
+          ports:
+          - containerPort: 7075
+          volumeMounts:
+          - mountPath: /run/secrets/spa
+            name: auth0spa
+            readOnly: true
+          {{- if  $value.needsMachinePem }}
+          - mountPath: /run/secrets/machine
+            name: auth0machine
+            readOnly: true
+          {{- end}}
+      nodeSelector:
+        {{- toYaml $.Values.nodeSelector |  trimSuffix "\n" | nindent 8 }}
+      volumes:
+        - name: auth0spa
+          secret:
+            secretName: spa
+        {{- if  $value.needsMachinePem }}
+        - name: auth0machine
+          secret:
+            defaultMode: 420
+            secretName: machine
+        {{- end}}
+---
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
