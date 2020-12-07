@@ -1,0 +1,99 @@
+{
+    "type": "Microsoft.VirtualMachineImages/imageTemplates",
+    "apiVersion": "2019-05-01-preview",
+    "location": "<region>",
+    "dependsOn": [],
+    "tags": {
+        "imagebuilderTemplate": "windows10O365",
+        "userIdentity": "enabled"
+            },
+        "identity": {
+            "type": "UserAssigned",
+                    "userAssignedIdentities": {
+                    "<imgBuilderId>": {}
+                        
+                }
+                },
+    "properties": {
+
+        "buildTimeoutInMinutes" : 60,
+
+        "vmProfile": 
+                {
+                "vmSize": "Standard_DS2_v2",
+                "osDiskSizeGB": 127
+                },
+                
+        "source": {
+            "type": "PlatformImage",
+                "publisher": "microsoftwindowsdesktop",
+                "offer": "office-365",
+                "sku": "20h1-evd-o365pp",
+                "version": "latest"
+            
+        },
+        "customize": [
+            {
+                "type": "PowerShell",
+                "name": "CreateBuildPath",
+                "runElevated": false,
+                "scriptUri": "https://raw.githubusercontent.com/danielsollondon/azvmimagebuilder/master/testPsScript.ps1"
+            },
+            {
+                "type": "WindowsRestart",
+                "restartCheckCommand": "echo Azure-Image-Builder-Restarted-the-VM  > c:\\buildArtifacts\\azureImageBuilderRestart.txt",
+                "restartTimeout": "5m"
+            },
+            {
+                "type": "File",
+                "name": "downloadBuildArtifacts",
+                "sourceUri": "https://raw.githubusercontent.com/danielsollondon/azvmimagebuilder/master/quickquickstarts/exampleArtifacts/buildArtifacts/index.html",
+                "destination":"c:\\buildArtifacts\\index.html"
+            },
+            {
+                "type": "File",
+                "name": "downloadteams",
+                "sourceUri": "https://statics.teams.cdn.office.net/production-windows-x64/1.3.00.15561/Teams_windows_x64.exe?culture=en-in&country=in&lm=deeplink&lmsrc=groupchatmarketingpageweb&cmpid=directdownloadwin64",
+                "destination":"c:\\buildArtifacts\\Teams_windows_x64.exe"
+            },
+            {
+                "type": "File",
+                "name": "downloadcitrixapps",
+                "sourceUri": "https://downloads.citrix.com/17880/CitrixWorkspaceApp.exe?__gda__=1595861509_00be7aa5b4a5077da46665eb851de680",
+                "destination":"c:\\buildArtifacts\\CitrixWorkspaceApp.exe"
+            },
+
+            {
+                "type": "PowerShell",
+                "name": "settingUpMgmtAgtPath",
+                "runElevated": false,
+                "inline": [
+                    "mkdir c:\\buildActions",
+                    "echo Azure-Image-Builder-Was-Here  > c:\\buildActions\\buildActionsOutput.txt"
+                ]
+                },
+                {
+                    "type": "WindowsUpdate",
+                    "searchCriteria": "IsInstalled=0",
+                    "filters": [
+                        "exclude:$_.Title -like '*Preview*'",
+                        "include:$true"
+                                ],
+                    "updateLimit": 20
+                }
+        ],
+        "distribute": 
+            [
+                {   "type":"ManagedImage",
+                    "imageId": "/subscriptions/<subscriptionID>/resourceGroups/<rgName>/providers/Microsoft.Compute/images/<imageName>",
+                    "location": "<region>",
+                    "runOutputName": "<runOutputName>",
+                    "artifactTags": {
+                        "source": "azVmImageBuilder",
+                        "baseosimg": "windows10"
+                    }
+                }
+            ]
+        }
+}
+
